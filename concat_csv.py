@@ -13,16 +13,17 @@ choice = st.sidebar.selectbox('Menu',menu)
 if choice == 'Concatenate File':
     with st.form(key='my_form_1'):
         lst_files = st.file_uploader("Upload CSV files", accept_multiple_files=True, type=(['csv']))
-        decode = st.radio('Bảng mã decode', options=['utf8', 'iso-8859-1', 'ascii', 'utf16', 'utf32','cp1252'])
+        decode = st.radio('Bảng mã decode', options=['utf8', 'iso-8859-1', 'ascii','cp1252'])
         file_type = st.radio('File type export', options=['*.csv','*.xlsx'])
         submit_button = st.form_submit_button(label='Submit')
-    st.write('### Total file:')
-    for i in lst_files:
-        if i is not None:
-            st.write(i.name)
-        else:
-            None
+
     if submit_button:
+        st.write('### Total file:')
+        for i in lst_files:
+            if i is not None:
+                st.write(i.name)
+            else:
+                None
         data = pd.read_csv(lst_files[0],encoding=decode,index_col=False)   
         data['File'] = lst_files[0].name
         for i in range(1,len(lst_files)):
