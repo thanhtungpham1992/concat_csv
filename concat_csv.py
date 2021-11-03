@@ -7,7 +7,7 @@ import io
 
 st.title('Concatenate file and detect decode')
 st.write('## Nối các file csv cùng định dạng')
-menu = ["Concatenate File", "Check Decode"]
+menu = ["Concatenate File", "Detect decode"]
 choice = st.sidebar.selectbox('Menu',menu)
 
 if choice == 'Concatenate File':
