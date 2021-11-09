@@ -5,3 +5,4 @@ datetime
 XlsxWriter
 chardet
 xmltodict
+pandas_read_xml
