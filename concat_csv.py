@@ -1,16 +1,19 @@
 import streamlit as st
 import pandas as pd
+import pandas_read_xml as pdx
 import numpy as np
 from datetime import datetime
 import chardet
 import io
+import xmltodict
+import json
 
 st.title('Concatenate file and detect decode')
-st.write('## Nối các file csv cùng định dạng')
-menu = ["Concatenate File", "Detect decode"]
+menu = ['Concatenate File', 'Detect decode', 'XML file']
 choice = st.sidebar.selectbox('Menu',menu)
 
 if choice == 'Concatenate File':
+    st.write('## Nối các file csv cùng định dạng')
     with st.form(key='my_form_1'):
         lst_files = st.file_uploader("Upload CSV files", accept_multiple_files=True, type=(['csv']))
         decode = st.radio('Bảng mã decode', options=['utf8', 'iso-8859-1', 'ascii','cp1252', 'Auto detect'])
@@ -51,8 +54,9 @@ if choice == 'Concatenate File':
                 writer.save()
                 st.download_button(label="Download Excel File", data=buffer, file_name='concat_file_'+dt_string+'.xlsx')
 elif choice == 'Detect decode':
+    st.write('## Nhận diện encoding')
     with st.form(key='my_form_2'):
-        lst_files = st.file_uploader('Upload CSV files', accept_multiple_files=True, type=(['csv']))
+        lst_files = st.file_uploader('Upload CSV files', accept_multiple_files=True)
         # for i in lst_files:
         #     if i is not None:
         #         st.write(i.name)
@@ -64,3 +68,53 @@ elif choice == 'Detect decode':
         rawdata = i.read()
         result = chardet.detect(rawdata)
         st.write(i.name,result['encoding'],result['confidence'])
+elif choice == 'XML file':
+    st.write('## Đọc file XML, lưu file Excel hoặc csv')
+    lst_files = st.file_uploader("Upload CSV files", accept_multiple_files=True, type=(['xml']))
+    phase = st.radio('Show XML code', options=['No', 'Yes'])
+    if phase == 'Yes':
+        for j in lst_files:
+            st.write(j.name)
+            st.write(json.loads(json.dumps(xmltodict.parse(j,disable_entities=False,))))
+            j.seek(0)
+
+    with st.form(key='my_form_1'):
+        
+        decode = st.radio('Bảng mã decode', options=['utf8', 'iso-8859-1', 'ascii','cp1252', 'Auto detect'])
+        root_key = st.radio('Root Key list', options=['User input', 'Auto detect'])
+        if root_key=='User input':
+            key = st.text_input('List of key')
+            st.write('Example:')
+            st.write('GL_12_BC_SONHATKYCHUNG_D,LIST_G_HEADER,G_HEADER,LIST_G_DETAILS,G_DETAILS')
+        else:
+            None
+        file_type = st.radio('File type export', options=['*.csv','*.xlsx'])
+        submit_button = st.form_submit_button(label='Submit')
+        
+    if submit_button:
+        st.write('### Total file, encoding:')
+        data = pd.DataFrame()
+        for i in lst_files:
+            if decode == 'Auto detect':
+                encode = chardet.detect(i.read())['encoding']
+                i.seek(0)
+            else:
+                encode = decode
+            st.write(i.name,encode)
+            if root_key == 'User input':
+                temp = pdx.read_xml(i.getvalue().decode(encode), key.split(','))
+            else:
+                temp = pdx.fully_flatten(pdx.read_xml(i.getvalue().decode(encode)))
+            temp['File'] = i.name
+            data = pd.concat([data,temp])
+        st.write('### Data concatenated:')
+        st.dataframe(data)
+        dt_string = datetime.now().strftime("%d%m%Y_%H%M%S")
+        if file_type == '*.csv':
+            st.download_button(data=data.to_csv(index=False, encoding='UTF-8'), label='Download CSV File', file_name='concat_file_'+dt_string+'.csv')
+        elif file_type == '*.xlsx':
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+                data.to_excel(writer, sheet_name='concat_file', index=False)
+                writer.save()
+                st.download_button(label="Download Excel File", data=buffer, file_name='concat_file_'+dt_string+'.xlsx')
