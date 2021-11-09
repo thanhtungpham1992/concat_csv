@@ -5,4 +5,3 @@ datetime
 XlsxWriter
 chardet
 xmltodict
-json
