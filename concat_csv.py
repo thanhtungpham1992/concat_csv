@@ -37,8 +37,12 @@ if choice == 'Concatenate File':
                 encode = decode
             st.write(i.name,encode)
             temp = pd.read_csv(i,encoding=encode,index_col=False)
-            temp['File'] = i.name
-            data = pd.concat([data,temp])
+            # Concatenate file
+            if len(lst_files) > 1:
+                temp['File'] = i.name
+                data = pd.concat([data,temp])
+            else:
+                data = temp
         st.write('### Data concatenated:')
         st.dataframe(data)
         dt_string = datetime.now().strftime("%d%m%Y_%H%M%S")
@@ -70,7 +74,7 @@ elif choice == 'Detect decode':
         st.write(i.name,result['encoding'],result['confidence'])
 elif choice == 'XML file':
     st.write('## Đọc file XML, lưu file Excel hoặc csv')
-    lst_files = st.file_uploader("Upload CSV files", accept_multiple_files=True, type=(['xml']))
+    lst_files = st.file_uploader("Upload XML files", accept_multiple_files=True, type=(['xml']))
     phase = st.radio('Show XML code', options=['No', 'Yes'])
     if phase == 'Yes':
         for j in lst_files:
@@ -79,15 +83,10 @@ elif choice == 'XML file':
             j.seek(0)
 
     with st.form(key='my_form_1'):
-        
         decode = st.radio('Bảng mã decode', options=['utf8', 'iso-8859-1', 'ascii','cp1252', 'Auto detect'])
-        root_key = st.radio('Root Key list', options=['User input', 'Auto detect'])
-        if root_key=='User input':
-            key = st.text_input('List of key')
-            st.write('Example:')
-            st.write('GL_12_BC_SONHATKYCHUNG_D,LIST_G_HEADER,G_HEADER,LIST_G_DETAILS,G_DETAILS')
-        else:
-            None
+        key = st.text_input('List of key')
+        st.write('Để trống hoặc điền root_key như ví dụ:')
+        st.write('GL_12_BC_SONHATKYCHUNG_D,LIST_G_HEADER,G_HEADER,LIST_G_DETAILS,G_DETAILS')
         file_type = st.radio('File type export', options=['*.csv','*.xlsx'])
         submit_button = st.form_submit_button(label='Submit')
         
@@ -95,18 +94,24 @@ elif choice == 'XML file':
         st.write('### Total file, encoding:')
         data = pd.DataFrame()
         for i in lst_files:
+            # detect encoding
             if decode == 'Auto detect':
                 encode = chardet.detect(i.read())['encoding']
                 i.seek(0)
             else:
                 encode = decode
+            # Read XML
             st.write(i.name,encode)
-            if root_key == 'User input':
-                temp = pdx.read_xml(i.getvalue().decode(encode), key.split(','))
+            if key == '':
+                temp = pdx.fully_flatten(pdx.read_xml(i.getvalue().decode(encode)))   
             else:
-                temp = pdx.fully_flatten(pdx.read_xml(i.getvalue().decode(encode)))
-            temp['File'] = i.name
-            data = pd.concat([data,temp])
+                temp = pdx.fully_flatten(pdx.read_xml(i.getvalue().decode(encode), key.split(',')))
+            # Concat XML
+            if len(lst_files) > 1:
+                temp['File'] = i.name
+                data = pd.concat([data,temp])
+            else:
+                data = temp
         st.write('### Data concatenated:')
         st.dataframe(data)
         dt_string = datetime.now().strftime("%d%m%Y_%H%M%S")
